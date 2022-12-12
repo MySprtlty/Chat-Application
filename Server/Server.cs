@@ -180,7 +180,8 @@ namespace Server
                     Console.WriteLine("[전체]{0}:{1}", fromID, msg);
 
                     string res = "[From:" + fromID + "]" + msg; // 받는 사람에게 보여줄 메시지
-                    Broadcast(s, res);
+                    // Broadcast(s, res);
+                    dandifiedBroadcast(fromID, s, res);
                     s.Send(Encoding.Unicode.GetBytes("BR_Success:"));
                 }
                 else if (tokens[1].Equals("UNI")) // 유니 캐스트를 보낼 때 (SEND:UNI:fromID:toID:MSG:)
@@ -192,8 +193,11 @@ namespace Server
                     Console.WriteLine(rMsg);
 
                     string res = "[From:" + fromID + "]" + msg; // 받는 사람에게 보여줄 메시지
-                    SendTo(toID, res);
-                    s.Send(Encoding.Unicode.GetBytes("UNI_Success:"));
+                    if (!isMuted(toID, fromID)) // 차단 여부 검사 (인자의 순서가 바뀌어야한다.)
+                    {
+                        SendTo(toID, res);
+                        s.Send(Encoding.Unicode.GetBytes("UNI_Success:"));
+                    }
                 }
                 else if (tokens[1].Equals("MUL")) // 멀티 캐스트를 보낼 때 (SEND:MUL:fromID:toID리스트:MSG:)
                 {
@@ -206,7 +210,10 @@ namespace Server
                     {                       
                         if (connectedClients.ContainsKey(tokens[i])) // 만약 유효한 아이디라면
                         {
-                            SendTo(tokens[i], res);       
+                            if (!isMuted(tokens[i], fromID)) // 차단 여부 검사
+                            {
+                                SendTo(tokens[i], res);
+                            }
                             count++;
                         }
                     }
@@ -236,6 +243,39 @@ namespace Server
 
                     SendTo(fromID, res);
                     s.Send(Encoding.Unicode.GetBytes("WC_Success:"));
+                }
+            }
+            else if (code.Equals("SET"))
+            {
+                if(tokens[1].Equals("MUTE"))
+                {
+                    fromID = tokens[2].Trim();
+                    toID = tokens[3].Trim();
+
+                    if(!muteTable.ContainsKey(fromID)) // fromID가 아직 등록되어 있지 않다면
+                    {
+                        List<string> blackList = new List<string>();
+                        blackList.Add(toID);
+                        muteTable.Add(fromID, blackList);
+                        s.Send(Encoding.Unicode.GetBytes("MUTE_Success:"));
+                    }
+                    else // fromID가 이미 등록되어 있다면
+                    {
+                        List<string> blackList;
+
+                        muteTable.TryGetValue(fromID, out blackList!);
+
+                        if (!blackList.Contains(toID)) // toID가 아직 등록되어 있지 않다면
+                        {
+                            blackList.Add(toID);
+                            s.Send(Encoding.Unicode.GetBytes("MUTE_Success:"));
+                        }
+                        else
+                        {
+                            s.Send(Encoding.Unicode.GetBytes("MUTE_Already:"));
+                        }
+                    }
+                    
                 }
             }
             else if (code.Equals("File")) // 클라이언트가 파일을 전송할 때
@@ -281,8 +321,7 @@ namespace Server
             Socket socket;
             byte[] bytes = Encoding.Unicode.GetBytes(msg);
             if (connectedClients.ContainsKey(id)) // Dictionary<TKey,TValue>에 지정한 키가 포함되어 있는지 여부를 확인합니다
-            {
-                //
+            {            
                 connectedClients.TryGetValue(id, out socket!); // out = ref
                 // TryGetValue는 지정한 키와 연결된 값을 가져옵니다.
                 // socket에 쓰여진다.
@@ -292,14 +331,16 @@ namespace Server
         void Broadcast(Socket s, string msg)
         {
             byte[] bytes = Encoding.Unicode.GetBytes(msg);
-            //
+
             foreach (KeyValuePair<string, Socket> client in connectedClients.ToArray())
             {
                 try
                 {
                     if (s != client.Value) // 자기 자신은 제외
+                    {
+                        
                         client.Value.Send(bytes);
-
+                    }
                 }
                 catch (Exception)
                 {
@@ -307,6 +348,46 @@ namespace Server
                 }
             }
         }
+
+        /*muteTable를 확인하는 브로드 캐스트 메서드*/
+        void dandifiedBroadcast(string fromID, Socket s, string msg)
+        {
+            byte[] bytes = Encoding.Unicode.GetBytes(msg);
+
+            foreach (KeyValuePair<string, Socket> client in connectedClients.ToArray())
+            {
+                try
+                {
+                    if (s != client.Value) // 자기 자신은 제외
+                    {
+                        if (!isMuted(client.Key, fromID))
+                        {
+                            client.Value.Send(bytes);
+                        }
+                    }
+                }
+                catch (Exception)
+                {
+                    Disconnected(client.Value);
+                }
+            }
+        }
+
+        /*차단 되었는지 유무를 확인하는 메서드*/
+        bool isMuted(string fromID, string toID)
+        {
+            if(muteTable.ContainsKey(fromID)) // fromID가 있고
+            {
+                List<string> blackList;
+                muteTable.TryGetValue(fromID, out blackList!);
+                if(blackList.Contains(toID)) // toID가 있다면
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
 
     }
 }

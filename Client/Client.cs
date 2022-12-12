@@ -141,18 +141,25 @@ namespace Client
                     try { ClientSocket.Send(data); } catch { }
 
                 }
-                else if (tokens[0].Equals("WHO"))
+                else if (tokens[0].Equals("WHO")) // WHO
                 {
                     m = "INFO:WHO:" + nameID + ":";
                     data = Encoding.Unicode.GetBytes(m);
                     Console.WriteLine("접속자 명단 요청");
                     try { ClientSocket.Send(data); } catch { }
                 }
-                else if(tokens[0].Equals("WC"))
+                else if(tokens[0].Equals("WC")) // WC
                 {
                     m = "INFO:WC:" + nameID + ":";
                     data = Encoding.Unicode.GetBytes(m);
                     Console.WriteLine("접속자 수 요청");
+                    try { ClientSocket.Send(data); } catch { }
+                }
+                else if(tokens[0].Equals("MUTE")) // MUTE:toID
+                {
+                    m = "SET:MUTE:" + nameID + ":" + tokens[1] + ":";
+                    data = Encoding.Unicode.GetBytes(m);
+                    Console.WriteLine("사용자 차단");
                     try { ClientSocket.Send(data); } catch { }
                 }
                 else if (tokens[0].Equals("File")) // 파일을 보낼 때
