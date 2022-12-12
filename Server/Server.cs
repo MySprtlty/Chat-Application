@@ -20,7 +20,11 @@ namespace Server
             }
         }
 
+        /*연결 중인 client들의 정보를 갖고있는 Dictionary*/
         private Dictionary<string, Socket> connectedClients = new();
+
+        /*차단에 대한 정보를 갖고 있는 Dictionary*/
+        private Dictionary<string, List<string>> muteTable = new();
 
         public Dictionary<string, Socket> ConnectedClients // Getter & Setter
         {
@@ -32,7 +36,9 @@ namespace Server
 
         private readonly IPEndPoint EndPoint = new(IPAddress.Parse("127.0.0.1"), 5001);
 
-        int clientNum; // 공유 자원 (race condition 발생 가능, 기말 프젝때는 Thread-Safe하게 설계하기)
+        /*멀티 스레드가 아니라 비동기라 race conditon 고려하지 않아도 된다.*/
+        int clientNum; // 접속 중인 클라이언트 수
+        int seq; // 아이디 중복을 막기 위한 번호
         Server()
         {
             ServerSocket = new(
@@ -41,6 +47,7 @@ namespace Server
                 ProtocolType.Tcp
             );
             clientNum = 0;
+            seq = 1;
         }
 
         void Init()
@@ -136,37 +143,47 @@ namespace Server
         void MessageProc(Socket s, byte[] bytes) // s는 현재 클라이언트 소켓값
         {
             string m = Encoding.Unicode.GetString(bytes); // Decoding
-            //
+            
             string[] tokens = m.Split(':'); // 문자열을 ':' 구분자를 기준으로 분리하여 문자열 배열에 저장한다.
             string fromID; // 송신자
             string toID; // 수신자
             string code = tokens[0]; // ID or BR or TO
 
-
             if (code.Equals("INIT")) // 클라이언트 처음 접속
             {
-                clientNum++; // 처음 클라이언트가 접속되면, 자동으로 ID: 가 전송된다. 따라서 clientNum++;
+                clientNum++; // 처음 클라이언트가 접속되면, 자동으로 INIT:ID: 가 전송된다. 따라서 clientNum++;
                 fromID = tokens[1].Trim(); // 문자열 시작과 끝의 공백을 제거한다.
-                // 
+
+                /*아이디 중복 처리*/
+                if (ConnectedClients.ContainsKey(fromID))
+                {
+                    fromID = fromID + seq.ToString();
+                    seq++;
+                    s.Send(Encoding.Unicode.GetBytes("ID_Changed:" + fromID + ":"));
+                }
+
                 Console.WriteLine("[접속{0}]ID:{1},{2}",
                     clientNum, fromID, s.RemoteEndPoint);
-                //
-                connectedClients.Add(fromID, s); // Dictionary
+                
+                connectedClients.Add(fromID, s); // Dictionary에 추가
                 s.Send(Encoding.Unicode.GetBytes("ID_REG_Success:")); // 인코딩
-                Broadcast(s, m);
+
+                string greet = "Welcome " + fromID;
+                Broadcast(s, greet);
             }
-            else if(code.Equals("SEND"))
+            else if(code.Equals("SEND")) // SEND Format
             {
-                if (tokens[1].Equals("BR")) // 브로드 캐스트를 보낼 때 (BR:발신아이디:메세지:)
+                if (tokens[1].Equals("BR")) // 브로드 캐스트를 보낼 때 (SEND:BR:fromID:MSG:)
                 {
-                    fromID = tokens[1].Trim(); // 발신 아이디
-                    string msg = tokens[2];
+                    fromID = tokens[2].Trim(); // 발신 아이디
+                    string msg = tokens[3];
                     Console.WriteLine("[전체]{0}:{1}", fromID, msg);
-                    //
-                    Broadcast(s, m);
+
+                    string res = "[From:" + fromID + "]" + msg; // 받는 사람에게 보여줄 메시지
+                    Broadcast(s, res);
                     s.Send(Encoding.Unicode.GetBytes("BR_Success:"));
                 }
-                else if (tokens[1].Equals("UNI")) // 유니 캐스트를 보낼 때 (TO:발신:송신:메시지:)
+                else if (tokens[1].Equals("UNI")) // 유니 캐스트를 보낼 때 (SEND:UNI:fromID:toID:MSG:)
                 {
                     fromID = tokens[2].Trim(); // 발신 아이디
                     toID = tokens[3].Trim(); // 송신 아이디
@@ -178,7 +195,7 @@ namespace Server
                     SendTo(toID, res);
                     s.Send(Encoding.Unicode.GetBytes("UNI_Success:"));
                 }
-                else if (tokens[1].Equals("MUL"))
+                else if (tokens[1].Equals("MUL")) // 멀티 캐스트를 보낼 때 (SEND:MUL:fromID:toID리스트:MSG:)
                 {
                     Console.WriteLine(m);
                     fromID = tokens[2].Trim();
@@ -196,9 +213,9 @@ namespace Server
                     s.Send(Encoding.Unicode.GetBytes("MUL_Success: " + count.ToString()));
                 }
             }
-            else if(code.Equals("INFO"))
+            else if(code.Equals("INFO")) // INFO format
             {
-                if (tokens[1].Equals("WHO"))
+                if (tokens[1].Equals("WHO")) 
                 {
                     fromID = tokens[2].Trim(); // 발신 아이디
                     string res = "Client List: "; // 응답 문자열
@@ -272,7 +289,7 @@ namespace Server
                 try { socket.Send(bytes); } catch { } // toID에게 보낸다.
             }
         }
-        void Broadcast(Socket s, string msg) // 5-2ㅡ모든 클라이언트에게 Send
+        void Broadcast(Socket s, string msg)
         {
             byte[] bytes = Encoding.Unicode.GetBytes(msg);
             //
@@ -280,8 +297,6 @@ namespace Server
             {
                 try
                 {
-                    //5-2 send
-                    //
                     if (s != client.Value) // 자기 자신은 제외
                         client.Value.Send(bytes);
 

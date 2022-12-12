@@ -42,7 +42,7 @@ namespace Client
                 ProtocolType.Tcp
             );
         }
-
+        string nameID;
         void Init()
         {
             ClientSocket.Connect(EndPoint);
@@ -67,6 +67,14 @@ namespace Client
                 str = str.Replace("\0", "");
                 Console.WriteLine("수신:" + str);
 
+                //if(str.Contains("ID_Changed"))
+                //{
+                //    string[] tokens = str.Split(':');
+                //    nameID = tokens[1];
+                //}
+
+                MessageProc(server, str);
+
                 SocketAsyncEventArgs args = new SocketAsyncEventArgs();
                 args.Completed += new EventHandler<SocketAsyncEventArgs>(Received);
                 ClientSocket.ReceiveAsync(args);
@@ -82,7 +90,7 @@ namespace Client
         {
             byte[] dataID;
             Console.WriteLine("ID를 입력하세요");
-            string nameID = Console.ReadLine()!;
+            nameID = Console.ReadLine()!;
             
             string message = "INIT:" + nameID + ":";
             dataID = Encoding.Unicode.GetBytes(message);
@@ -184,6 +192,17 @@ namespace Client
 
             Console.WriteLine("파일 송신 종료");
 
+        }
+
+        void MessageProc(Socket s, string str)
+        {
+
+            /*서버에서 닉네임을 바꾸라는 지시를 내린경우*/
+            if (str.Contains("ID_Changed"))
+            {
+                string[] tokens = str.Split(':');
+                nameID = tokens[1];
+            }
         }
     }
 }
