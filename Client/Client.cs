@@ -162,7 +162,7 @@ namespace Client
                     Console.WriteLine("사용자 차단");
                     try { ClientSocket.Send(data); } catch { }
                 }
-                else if (tokens[0].Equals("File")) // 파일을 보낼 때
+                else if (tokens[0].Equals("FILE")) // 파일을 보낼 때
                 {
                     SendFile(tokens[1]); // Buffer가 4096이다.
                     // file은 try-catch가 불필요하다.

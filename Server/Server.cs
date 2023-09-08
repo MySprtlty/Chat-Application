@@ -38,7 +38,7 @@ namespace Server
 
         /*멀티 스레드가 아니라 비동기라 race conditon 고려하지 않아도 된다.*/
         int clientNum; // 접속 중인 클라이언트 수
-        int seq; // 아이디 중복을 막기 위한 번호
+        //int seq; // 아이디 중복을 막기 위한 번호
         Server()
         {
             ServerSocket = new(
@@ -47,7 +47,7 @@ namespace Server
                 ProtocolType.Tcp
             );
             clientNum = 0;
-            seq = 1;
+            //seq = 1;
         }
 
         void Init()
@@ -149,6 +149,8 @@ namespace Server
             string toID; // 수신자
             string code = tokens[0]; // ID or BR or TO
 
+            Random rand = new Random();
+            
             if (code.Equals("INIT")) // 클라이언트 처음 접속
             {
                 clientNum++; // 처음 클라이언트가 접속되면, 자동으로 INIT:ID: 가 전송된다. 따라서 clientNum++;
@@ -157,8 +159,7 @@ namespace Server
                 /*아이디 중복 처리*/
                 if (ConnectedClients.ContainsKey(fromID))
                 {
-                    fromID = fromID + seq.ToString();
-                    seq++;
+                    fromID = fromID + rand.Next(99999).ToString();
                     s.Send(Encoding.Unicode.GetBytes("ID_Changed:" + fromID + ":"));
                 }
 
@@ -278,7 +279,7 @@ namespace Server
                     
                 }
             }
-            else if (code.Equals("File")) // 클라이언트가 파일을 전송할 때
+            else if (code.Equals("FILE")) // 클라이언트가 파일을 전송할 때
             { 
                 ReceiveFile(s, m); // 파일 수신 처리를 맡는 함수
             }
