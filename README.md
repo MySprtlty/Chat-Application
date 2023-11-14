@@ -1,5 +1,16 @@
 # 🏷️Chat Application
 
+- Socket Programming in C#
+- Designed message protocols between server and client to implement various functionalities
+
+## 📌functionalities
+
+- 특정 사용자 차단 기능
+- 접속중인 사용자 목록 출력
+- 접속중인 사용자수 출력
+- 사용자 아이디 중복 문제 회피
+- 유니 캐스트, 멀티 캐스트, 브로드 캐스트 채팅 지원
+
 ## 📌protocol 설계
 
 ### INIT Type
@@ -24,7 +35,6 @@
 ### Response
 
 - ID_Changed:fromID // ID가 이미 존재하는 경우 난수를 이용해 문제 해결
-
 - BR_Success:
 - UNI_Success:
 - MUL_Success:
