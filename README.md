@@ -1,45 +1,53 @@
-# 🏷️Chat Application
-
+# Chat Application
 - Socket Programming in C#
-- Designed message protocols between server and client to implement various functionalities
+- Designed the format of message protocols between the server and client to implement various functionalities.
 
-## 📌functionalities
-
+## 1. functionalities
 - 특정 사용자 차단 기능
 - 접속중인 사용자 목록 출력
-- 접속중인 사용자수 출력
-- 사용자 아이디 중복 문제 회피
+- 접속중인 사용자 수 출력
+- 사용자 아이디가 중복됐을 때 발생하는 문제를 회피
 - 유니 캐스트, 멀티 캐스트, 브로드 캐스트 채팅 지원
 
-## 📌protocol 설계
+## 2. protocol format
+### 1) INIT Type
+- INIT:fromID:
+  - 서버에 접속할 때
 
-### INIT Type
+### 2) SEND Type
+- SEND:BR:fromID:MSG:
+  - 브로드 캐스트 시
+- SEND:UNI:fromID:toID:MSG:
+  - 유니 캐스트 시
+- SEND:MUL:fromID:toID리스트:MSG:
+  - 멀티 캐스트 시
 
-- INIT:fromID: // 채팅 시작
+### 3) INFO Type
+- INFO:WHO:
+  - 접속중인 사용자 출력 요청
+- INFO:WC:
+  - 접속중인 사용자 수 출력 요청
 
-### SEND Type
+### 4) SET Type
+- SET:MUTE:fromID:toID:
+  - 특정 사용자 차단 요청
 
-- SEND:BR:fromID:MSG: // 브로드 캐스트
-- SEND:UNI:fromID:toID:MSG: // 유니 캐스트
-- SEND:MUL:fromID:toID리스트:MSG: // 멀티 캐스트
-
-### INFO Type
-
-- INFO:WHO: // 접속중인 사용자 출력
-- INFO:WC: // 접속중인 사용자수 출력
-
-### SET Type
-
-- SET:MUTE:fromID:toID: // 특정 사용자 차단
-
-### Response
-
-- ID_Changed:fromID // ID가 이미 존재하는 경우 난수를 이용해 문제 해결
-- BR_Success:
-- UNI_Success:
-- MUL_Success:
-- WHO_Success:
-- WC_Success:
+### 5) Response Type
 - ID_REG_Success:
+  - 서버 접속 성공했을 때
+- ID_Changed:fromID
+  - ID가 이미 존재하는 경우 난수를 이용해 임의로 아이디 조정 후 클라이언트에게 알림
+- BR_Success:
+  - 브로드캐스트가 성공했을 때 
+- UNI_Success:
+  - 유니캐스트가 성공했을 때
+- MUL_Success:
+  - 멀티캐스트가 성공했을 때
+- WHO_Success:
+  - 접속중인 사용자 목록을 전송
+- WC_Success:
+  - 접속중인 사용자 수를 전송
 - MUTE_Success:
+  - 사용자 차단 성공했을 때
 - MUTE_Already:
+  - 이미 차단된 사용자일 때
