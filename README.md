@@ -1,3 +1,4 @@
+![Chat Application](https://github.com/MySprtlty/Chat-Application/assets/89295517/e7aff5d5-4b95-452c-8b3d-e3afa176babd)
 # Chat Application
 - Socket Programming in C#
 - Designed the format of message protocols between the server and client to implement various functionalities.
