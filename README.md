@@ -36,7 +36,7 @@
 ### 5) Response Type
 - ID_REG_Success:
   - 서버 접속 성공했을 때
-- ID_Changed:fromID
+- ID_Changed:fromID:
   - ID가 이미 존재하는 경우 난수를 이용해 임의로 아이디 조정 후 클라이언트에게 알림
 - BR_Success:
   - 브로드캐스트가 성공했을 때 
